@@ -1,0 +1,5 @@
+/.env
+/transformers/
+/__pycache__/
+/venv/
+
