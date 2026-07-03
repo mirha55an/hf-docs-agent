@@ -2,4 +2,5 @@
 /transformers/
 /__pycache__/
 /venv/
-
+/data/
+/.Dockerfile
