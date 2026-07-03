@@ -1,3 +1,11 @@
+---
+title: HF Docs Agent
+colorFrom: blue
+colorTo: green
+sdk: docker
+pinned: false
+---
+
 # HF Docs Agent
 
 An agentic RAG system for querying Hugging Face Transformers and PEFT documentation.
