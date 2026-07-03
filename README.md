@@ -2,7 +2,7 @@
 
 An agentic RAG system for querying Hugging Face Transformers and PEFT documentation. Built with hybrid retrieval, cross-encoder reranking, and a LangGraph ReAct agent that decides between two tools per query.
 
-Live demo: [https://huggingface.co/spaces/mirha55an/hf-docs-agent]
+Live demo: https://huggingface.co/spaces/mirha55an/hf-docs-agent
 
 ---
 
@@ -164,17 +164,3 @@ docker run -p 7860:7860 \
 Note: the `data/` folder with built indexes must exist before building the Docker image. Run Step 6 first.
 
 ---
-
-## .gitignore
-
-Make sure these are excluded from your repo:
-
-```
-venv/
-data/
-transformers/
-__pycache__/
-.env
-*.pkl
-*.pyc
-```
