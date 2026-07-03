@@ -1,9 +1,12 @@
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from src.agent import run_langgraph_agent
 from pydantic import BaseModel
 from fastapi.responses import StreamingResponse
 
 app = FastAPI(title="HF Docs Agent")
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 class QueryRequest(BaseModel):
     question: str
@@ -19,4 +22,4 @@ def ask_question(request: QueryRequest):
 
 @app.get("/")
 def root():
-    return {"message": "HF Docs Agent is running. POST to /ask with {question: ...}"}
+    return FileResponse("static/index.html")
