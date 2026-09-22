@@ -4,6 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>HF Docs Agent</title>
+    <script src="/static/marked.min.js"></script>
+    <script>
+      if (typeof marked === "undefined") {
+        const s = document.createElement("script");
+        s.src = "https://cdn.jsdelivr.net/npm/marked/marked.min.js";
+        document.head.appendChild(s);
+      }
+    </script>
     <style>
       * {
         box-sizing: border-box;
@@ -67,6 +75,8 @@
       .message.agent {
         align-self: flex-start;
         align-items: flex-start;
+        max-width: 100%;
+        width: 100%;
       }
 
       .bubble {
@@ -74,7 +84,6 @@
         border-radius: 16px;
         font-size: 14px;
         line-height: 1.6;
-        white-space: pre-wrap;
         word-break: break-word;
       }
 
@@ -82,6 +91,7 @@
         background: #2563eb;
         color: #fff;
         border-bottom-right-radius: 4px;
+        white-space: pre-wrap;
       }
 
       .message.agent .bubble {
@@ -89,6 +99,128 @@
         border: 1px solid #2a2a2a;
         color: #e0e0e0;
         border-bottom-left-radius: 4px;
+        white-space: normal;
+      }
+
+      .message.agent .bubble > *:first-child {
+        margin-top: 0;
+      }
+      .message.agent .bubble > *:last-child {
+        margin-bottom: 0;
+      }
+
+      /* Markdown Output Formatting */
+      .bubble p {
+        margin: 0 0 10px 0;
+      }
+
+      .bubble h1,
+      .bubble h2,
+      .bubble h3,
+      .bubble h4 {
+        color: #fff;
+        margin: 14px 0 6px 0;
+        font-weight: 600;
+      }
+
+      .bubble h1 { font-size: 18px; }
+      .bubble h2 { font-size: 16px; }
+      .bubble h3 { font-size: 15px; }
+      .bubble h4 { font-size: 14px; }
+
+      .bubble ul,
+      .bubble ol {
+        margin: 0 0 10px 0;
+        padding-left: 20px;
+      }
+
+      .bubble li {
+        margin-bottom: 4px;
+      }
+
+      .bubble strong {
+        color: #fff;
+        font-weight: 600;
+      }
+
+      .bubble a {
+        color: #60a5fa;
+        text-decoration: underline;
+      }
+
+      .bubble blockquote {
+        border-left: 3px solid #2563eb;
+        padding-left: 12px;
+        margin: 8px 0;
+        color: #aaa;
+      }
+
+      .bubble code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        background: #141414;
+        color: #f87171;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 13px;
+        border: 1px solid #2c2c2c;
+      }
+
+      .bubble pre {
+        background: #141414;
+        border: 1px solid #2a2a2a;
+        border-radius: 8px;
+        padding: 12px 14px;
+        margin: 10px 0;
+        overflow-x: auto;
+      }
+
+      .bubble pre code {
+        background: transparent;
+        padding: 0;
+        border: none;
+        color: #e0e0e0;
+        font-size: 13px;
+        line-height: 1.5;
+        white-space: pre;
+      }
+
+      .bubble table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 12px 0;
+        font-size: 13px;
+        line-height: 1.5;
+        border: 1px solid #333;
+        border-radius: 6px;
+        overflow: hidden;
+      }
+
+      .bubble th,
+      .bubble td {
+        padding: 8px 12px;
+        border: 1px solid #333;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      .bubble th {
+        background: #252525;
+        color: #fff;
+        font-weight: 600;
+      }
+
+      .bubble td {
+        background: #181818;
+      }
+
+      .bubble tr:nth-child(even) td {
+        background: #1e1e1e;
+      }
+
+      .bubble hr {
+        border: none;
+        border-top: 1px solid #2a2a2a;
+        margin: 12px 0;
       }
 
       .label {
@@ -260,6 +392,104 @@
         input.focus();
       }
 
+      function renderMarkdown(text) {
+        if (typeof marked !== "undefined" && marked.parse) {
+          try {
+            return marked.parse(text);
+          } catch (e) {
+            console.error("marked.parse error, using fallback:", e);
+          }
+        }
+
+        let html = text
+          .replace(/&(?!amp;|lt;|gt;|quot;|#)/g, "&amp;")
+          .replace(/<(?!\/?(br|strong|em|code)\b)[^>]*>/gi, "");
+
+        // Code blocks
+        html = html.replace(/```(\w+)?\n([\s\S]*?)```/g, function(_, lang, code) {
+          return `<pre><code class="language-${lang || 'text'}">${code.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</code></pre>`;
+        });
+
+        // Inline code
+        html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
+
+        // Bold
+        html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+
+        // Italic
+        html = html.replace(/(^|[^\*])\*([^*]+)\*([^\*]|$)/g, "$1<em>$2</em>$3");
+
+        // Markdown tables
+        const lines = html.split("\n");
+        let inTable = false;
+        let tableHtml = [];
+        let newLines = [];
+
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if (line.startsWith("|") && line.endsWith("|")) {
+            if (!inTable) {
+              inTable = true;
+              tableHtml = ["<table>"];
+            }
+            if (line.includes("---")) {
+              continue;
+            }
+            const cells = line.slice(1, -1).split("|").map(c => c.trim());
+            const tag = tableHtml.length === 1 ? "th" : "td";
+            tableHtml.push("<tr>" + cells.map(c => `<${tag}>${c}</${tag}>`).join("") + "</tr>");
+          } else {
+            if (inTable) {
+              tableHtml.push("</table>");
+              newLines.push(tableHtml.join(""));
+              tableHtml = [];
+              inTable = false;
+            }
+            newLines.push(lines[i]);
+          }
+        }
+        if (inTable) {
+          tableHtml.push("</table>");
+          newLines.push(tableHtml.join(""));
+        }
+
+        html = newLines.join("\n");
+
+        // Bullet lists
+        html = html.replace(/(?:^|\n)(?:[-*]\s+.*(?:\n(?:\s{2,}|\t).*)*)+/g, function(match) {
+          const items = match.trim().split(/\n(?=[-*]\s+)/).map(item => {
+            return "<li>" + item.replace(/^[-*]\s+/, "").replace(/\n\s+/g, " ") + "</li>";
+          });
+          return "<ul>" + items.join("") + "</ul>";
+        });
+
+        // Numbered lists
+        html = html.replace(/(?:^|\n)(?:\d+\.\s+.*(?:\n(?:\s{2,}|\t).*)*)+/g, function(match) {
+          const items = match.trim().split(/\n(?=\d+\.\s+)/).map(item => {
+            return "<li>" + item.replace(/^\d+\.\s+/, "").replace(/\n\s+/g, " ") + "</li>";
+          });
+          return "<ol>" + items.join("") + "</ol>";
+        });
+
+        // Headings
+        html = html.replace(/^### (.*$)/gim, "<h3>$1</h3>");
+        html = html.replace(/^## (.*$)/gim, "<h2>$1</h2>");
+        html = html.replace(/^# (.*$)/gim, "<h1>$1</h1>");
+
+        // Paragraphs & line breaks
+        const blocks = html.split(/\n\n+/);
+        html = blocks.map(b => {
+          b = b.trim();
+          if (!b) return "";
+          if (b.startsWith("<table") || b.startsWith("<ul") || b.startsWith("<ol") || b.startsWith("<pre") || b.startsWith("<h")) {
+            return b;
+          }
+          return "<p>" + b.replace(/\n/g, "<br>") + "</p>";
+        }).join("\n");
+
+        return html;
+      }
+
       function addMessage(text, role) {
         const wrapper = document.createElement("div");
         wrapper.className = `message ${role}`;
@@ -268,7 +498,11 @@
         label.textContent = role === "user" ? "You" : "Agent";
         const bubble = document.createElement("div");
         bubble.className = "bubble";
-        bubble.textContent = text;
+        if (role === "agent") {
+          bubble.innerHTML = renderMarkdown(text);
+        } else {
+          bubble.textContent = text;
+        }
         wrapper.appendChild(label);
         wrapper.appendChild(bubble);
         chat.appendChild(wrapper);

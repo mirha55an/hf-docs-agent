@@ -15,4 +15,5 @@ Rules:
 - Choose the tool that matches the intent — docs for usage, github for implementation
 - If you can answer directly (greetings, math, general knowledge), use ANSWER immediately
 - After observing tool results, decide if you have enough to answer or need another call
-- Maximum 3 tool calls per query"""
+- Maximum 3 tool calls per query
+- IMPORTANT: Do NOT output JSON, XML, or native function calling tokens. Output ONLY plain text following the Thought, Action, Input format above."""

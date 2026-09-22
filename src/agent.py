@@ -41,28 +41,53 @@ def call_llm(prompt, retries=3):
                 raise
 
 def agent_node(state: AgentState):
+  import re
 
   messages = [SystemMessage(content=SYSTEM_PROMPT)] + state['messages']
 
   response = call_llm(messages)
   content = response.content
-  reply = extract_text(content)
+  reply = extract_text(content).strip()
 
-  reply = reply.strip()
-
-  lines = reply.split("\n")
-  action_line = next((l for l in lines if l.startswith("Action:")), "")
-  action = action_line.replace("Action:", "").strip()
-
-  input_line_idx = next((i for i, l in enumerate(lines) if l.startswith("Input:")), None)
-
-  if input_line_idx is not None:
-    # First line of Input: plus all subsequent lines
-    first_line = lines[input_line_idx].replace("Input:", "").strip()
-    remaining = lines[input_line_idx + 1:]
-    inp = "\n".join([first_line] + remaining).strip()
+  # Check if Action: ANSWER is present anywhere in the reply
+  answer_match = re.search(r'(?:\*\*|\b)Action(?:\*\*|\b)?\s*:\s*ANSWER\b', reply, re.IGNORECASE)
+  if answer_match:
+      after_answer = reply[answer_match.end():].strip()
+      input_match = re.search(r'(?:\*\*|\b)Input(?:\*\*|\b)?\s*:\s*', after_answer, re.IGNORECASE)
+      if input_match:
+          final_ans = after_answer[input_match.end():].strip()
+      else:
+          final_ans = after_answer
+      action = "ANSWER"
+      inp = final_ans
   else:
-    inp = ""
+      # Check for tool actions: retrieve or github_search
+      tool_match = re.search(r'(?:\*\*|\b)Action(?:\*\*|\b)?\s*:\s*(retrieve|github_search)\b', reply, re.IGNORECASE)
+      if tool_match:
+          action = tool_match.group(1).lower()
+          after_action = reply[tool_match.end():].strip()
+          input_match = re.search(r'(?:\*\*|\b)Input(?:\*\*|\b)?\s*:\s*', after_action, re.IGNORECASE)
+          if input_match:
+              rest = after_action[input_match.end():].strip()
+              query_lines = []
+              for line in rest.splitlines():
+                  if re.match(r'(?:\*\*|\b)?(Thought|Action|Observation)(?:\*\*|\b)?\s*:', line.strip(), re.IGNORECASE):
+                      break
+                  query_lines.append(line)
+              inp = " ".join(query_lines).strip()
+          else:
+              inp = after_action.splitlines()[0].strip() if after_action else ""
+      else:
+          # Direct answer without Action: tag
+          clean_ans = reply
+          for prefix in ["**Answer:**", "Answer:", "**Final Answer:**", "Final Answer:"]:
+              if clean_ans.startswith(prefix):
+                  clean_ans = clean_ans[len(prefix):].strip()
+                  break
+          action = "ANSWER"
+          inp = clean_ans
+
+  print(f"[AGENT] Action: {action} | Tool input: {inp[:100]}", flush=True)
 
   return {
       'messages' : [AIMessage(content=reply)],
@@ -73,14 +98,10 @@ def agent_node(state: AgentState):
 
 
 def tool_node(state: AgentState):
-  content = state["messages"][-1].content
-  last_message = extract_text(content)
-  lines = last_message.split('\n')
-  action_line = next((l for l in lines if l.startswith("Action:")), "")
-  input_line = next((l for l in lines if l.startswith("Input:")), "Input: ")
+  action = state.get("action", "").strip()
+  query = state.get("tool_input", "").strip()
 
-  action = action_line.replace("Action:", "").strip()
-  query = input_line.replace("Input:", "").strip()
+  print(f"[TOOL] Executing {action} with query: {query}", flush=True)
 
   # Dispatch to the right tool
   if action in TOOLS:
@@ -88,14 +109,14 @@ def tool_node(state: AgentState):
   else:
       observation = f"Unknown tool: {action}"
 
+  print(f"[TOOL] {action} returned {len(observation)} chars", flush=True)
+
   return {
       "messages": [HumanMessage(content=f"Observation: {observation[:2000]}")]
   }
 
 def should_continue(state: AgentState):
-    last_content = state["messages"][-1].content
-    last_message = extract_text(last_content)
-    if "Action: ANSWER" in last_message:
+    if state.get("action") == "ANSWER" or state.get("final_answer"):
         return "end"
     return "tool"
 
@@ -118,6 +139,7 @@ graph.add_edge("tool", "agent")
 app = graph.compile()
 
 def run_langgraph_agent(question: str):
+    print(f"\n[AGENT] Starting processing question: '{question}'", flush=True)
     result = app.invoke({
         "question": question,
         "messages": [HumanMessage(content=question)],
@@ -125,4 +147,6 @@ def run_langgraph_agent(question: str):
         "action": "",
         "tool_input": ""
     })
-    return result["final_answer"]
+    final = result.get("final_answer", "")
+    print(f"[AGENT] Completed. Final answer length: {len(final)} chars\n", flush=True)
+    return final
