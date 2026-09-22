@@ -2,9 +2,23 @@ from src.tools import TOOLS
 from src.prompts import SYSTEM_PROMPT
 from typing import TypedDict, Annotated
 from langgraph.graph import StateGraph, END
-import operator, os
+import operator, os, sys
 from dotenv import load_dotenv
 load_dotenv()
+
+# Force UTF-8 output on Windows to avoid UnicodeEncodeError from cp1252
+if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
+def safe_print(*args, **kwargs):
+    """print() that never crashes on unencodable characters."""
+    try:
+        print(*args, **kwargs)
+    except UnicodeEncodeError:
+        text = " ".join(str(a) for a in args) + "\n"
+        sys.stdout.buffer.write(text.encode("utf-8", errors="replace"))
+        sys.stdout.buffer.flush()
 
 class AgentState(TypedDict):
     question: str
@@ -35,7 +49,7 @@ def call_llm(prompt, retries=3):
             return llm.invoke(prompt)
         except Exception as e:
             if attempt < retries - 1:
-                print(f"LLM Error, retrying in 10s... ({e})")
+                safe_print(f"LLM Error, retrying in 10s... ({e})")
                 time.sleep(10)
             else:
                 raise
@@ -87,7 +101,7 @@ def agent_node(state: AgentState):
           action = "ANSWER"
           inp = clean_ans
 
-  print(f"[AGENT] Action: {action} | Tool input: {inp[:100]}", flush=True)
+  safe_print(f"[AGENT] Action: {action} | Tool input: {inp[:100]}", flush=True)
 
   return {
       'messages' : [AIMessage(content=reply)],
@@ -101,7 +115,7 @@ def tool_node(state: AgentState):
   action = state.get("action", "").strip()
   query = state.get("tool_input", "").strip()
 
-  print(f"[TOOL] Executing {action} with query: {query}", flush=True)
+  safe_print(f"[TOOL] Executing {action} with query: {query}", flush=True)
 
   # Dispatch to the right tool
   if action in TOOLS:
@@ -109,7 +123,7 @@ def tool_node(state: AgentState):
   else:
       observation = f"Unknown tool: {action}"
 
-  print(f"[TOOL] {action} returned {len(observation)} chars", flush=True)
+  safe_print(f"[TOOL] {action} returned {len(observation)} chars", flush=True)
 
   return {
       "messages": [HumanMessage(content=f"Observation: {observation[:2000]}")]
@@ -139,7 +153,7 @@ graph.add_edge("tool", "agent")
 app = graph.compile()
 
 def run_langgraph_agent(question: str):
-    print(f"\n[AGENT] Starting processing question: '{question}'", flush=True)
+    safe_print(f"\n[AGENT] Starting processing question: '{question}'", flush=True)
     result = app.invoke({
         "question": question,
         "messages": [HumanMessage(content=question)],
@@ -148,5 +162,5 @@ def run_langgraph_agent(question: str):
         "tool_input": ""
     })
     final = result.get("final_answer", "")
-    print(f"[AGENT] Completed. Final answer length: {len(final)} chars\n", flush=True)
+    safe_print(f"[AGENT] Completed. Final answer length: {len(final)} chars\n", flush=True)
     return final

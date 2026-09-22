@@ -1,9 +1,11 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html class="h-full bg-zinc-950 text-zinc-100 antialiased" lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>HF Docs Agent</title>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>HF Docs Agent — RAG Developer Assistant</title>
+
+    <!-- Markdown renderer -->
     <script src="/static/marked.min.js"></script>
     <script>
       if (typeof marked === "undefined") {
@@ -12,374 +14,337 @@
         document.head.appendChild(s);
       }
     </script>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ["Inter", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
+              mono: ["JetBrains Mono", "Menlo", "Monaco", "Courier New", "monospace"],
+            },
+            colors: {
+              zinc: {
+                850: "#1e1e23",
+                925: "#121215",
+                950: "#0c0d0e",
+              },
+            },
+          },
+        },
+      };
+    </script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+
     <style>
-      * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
+      /* Custom scrollbar */
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #27272a;
+        border-radius: 9999px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #3f3f46;
       }
 
-      body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        background: #0f0f0f;
-        color: #e0e0e0;
-        height: 100vh;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-      }
-
-      header {
-        width: 100%;
-        padding: 16px 24px;
-        background: #1a1a1a;
-        border-bottom: 1px solid #2a2a2a;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }
-
-      header h1 {
-        font-size: 18px;
-        font-weight: 600;
-        color: #fff;
-      }
-
-      header span {
-        font-size: 13px;
-        color: #888;
-      }
-
-      #chat-container {
-        width: 100%;
-        max-width: 760px;
-        flex: 1;
-        overflow-y: auto;
-        padding: 24px 16px;
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-      }
-
-      .message {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        max-width: 85%;
-      }
-
-      .message.user {
-        align-self: flex-end;
-        align-items: flex-end;
-      }
-      .message.agent {
-        align-self: flex-start;
-        align-items: flex-start;
-        max-width: 100%;
-        width: 100%;
-      }
-
-      .bubble {
-        padding: 12px 16px;
-        border-radius: 16px;
-        font-size: 14px;
-        line-height: 1.6;
-        word-break: break-word;
-      }
-
-      .message.user .bubble {
-        background: #2563eb;
-        color: #fff;
-        border-bottom-right-radius: 4px;
-        white-space: pre-wrap;
-      }
-
-      .message.agent .bubble {
-        background: #1e1e1e;
-        border: 1px solid #2a2a2a;
-        color: #e0e0e0;
-        border-bottom-left-radius: 4px;
-        white-space: normal;
-      }
-
-      .message.agent .bubble > *:first-child {
+      /* Markdown output formatting inside agent messages */
+      .md-body > *:first-child {
         margin-top: 0;
       }
-      .message.agent .bubble > *:last-child {
+      .md-body > *:last-child {
         margin-bottom: 0;
       }
-
-      /* Markdown Output Formatting */
-      .bubble p {
+      .md-body p {
         margin: 0 0 10px 0;
       }
-
-      .bubble h1,
-      .bubble h2,
-      .bubble h3,
-      .bubble h4 {
+      .md-body h1,
+      .md-body h2,
+      .md-body h3,
+      .md-body h4 {
         color: #fff;
         margin: 14px 0 6px 0;
         font-weight: 600;
       }
-
-      .bubble h1 { font-size: 18px; }
-      .bubble h2 { font-size: 16px; }
-      .bubble h3 { font-size: 15px; }
-      .bubble h4 { font-size: 14px; }
-
-      .bubble ul,
-      .bubble ol {
+      .md-body h1 { font-size: 18px; }
+      .md-body h2 { font-size: 16px; }
+      .md-body h3 { font-size: 15px; }
+      .md-body h4 { font-size: 14px; }
+      .md-body ul,
+      .md-body ol {
         margin: 0 0 10px 0;
         padding-left: 20px;
       }
-
-      .bubble li {
+      .md-body li {
         margin-bottom: 4px;
       }
-
-      .bubble strong {
+      .md-body strong {
         color: #fff;
         font-weight: 600;
       }
-
-      .bubble a {
+      .md-body a {
         color: #60a5fa;
         text-decoration: underline;
       }
-
-      .bubble blockquote {
+      .md-body blockquote {
         border-left: 3px solid #2563eb;
         padding-left: 12px;
         margin: 8px 0;
         color: #aaa;
       }
-
-      .bubble code {
-        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-        background: #141414;
-        color: #f87171;
+      .md-body code {
+        font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        background: #18181b;
+        color: #93c5fd;
         padding: 2px 6px;
         border-radius: 4px;
         font-size: 13px;
-        border: 1px solid #2c2c2c;
+        border: 1px solid #27272a;
       }
-
-      .bubble pre {
-        background: #141414;
-        border: 1px solid #2a2a2a;
+      .md-body pre {
+        background: #090a0c;
+        border: 1px solid #27272a;
         border-radius: 8px;
         padding: 12px 14px;
         margin: 10px 0;
         overflow-x: auto;
       }
-
-      .bubble pre code {
+      .md-body pre code {
         background: transparent;
         padding: 0;
         border: none;
-        color: #e0e0e0;
+        color: #d4d4d8;
         font-size: 13px;
         line-height: 1.5;
         white-space: pre;
       }
-
-      .bubble table {
+      .md-body table {
         width: 100%;
         border-collapse: collapse;
         margin: 12px 0;
         font-size: 13px;
         line-height: 1.5;
-        border: 1px solid #333;
+        border: 1px solid #27272a;
         border-radius: 6px;
         overflow: hidden;
       }
-
-      .bubble th,
-      .bubble td {
+      .md-body th,
+      .md-body td {
         padding: 8px 12px;
-        border: 1px solid #333;
+        border: 1px solid #27272a;
         text-align: left;
         vertical-align: top;
       }
-
-      .bubble th {
-        background: #252525;
+      .md-body th {
+        background: #18181b;
         color: #fff;
         font-weight: 600;
       }
-
-      .bubble td {
-        background: #181818;
+      .md-body td {
+        background: #0c0d0e;
       }
-
-      .bubble tr:nth-child(even) td {
-        background: #1e1e1e;
+      .md-body tr:nth-child(even) td {
+        background: #121215;
       }
-
-      .bubble hr {
+      .md-body hr {
         border: none;
-        border-top: 1px solid #2a2a2a;
+        border-top: 1px solid #27272a;
         margin: 12px 0;
       }
 
-      .label {
-        font-size: 11px;
-        color: #555;
-        padding: 0 4px;
-      }
-
+      /* Thinking indicator */
       .thinking {
         display: flex;
-        gap: 4px;
-        padding: 12px 16px;
-        background: #1e1e1e;
-        border: 1px solid #2a2a2a;
+        gap: 5px;
+        padding: 16px 20px;
+        background: #18181b;
+        border: 1px solid #27272a;
         border-radius: 16px;
         border-bottom-left-radius: 4px;
+        align-items: center;
       }
-
-      .thinking span {
-        width: 6px;
-        height: 6px;
-        background: #555;
+      .thinking span.thinking-dot {
+        width: 7px;
+        height: 7px;
+        background: #52525b;
         border-radius: 50%;
-        animation: bounce 1.2s infinite;
+        flex-shrink: 0;
+        animation: think-bounce 1.2s infinite;
       }
-
-      .thinking span:nth-child(2) {
-        animation-delay: 0.2s;
-      }
-      .thinking span:nth-child(3) {
-        animation-delay: 0.4s;
-      }
-
-      @keyframes bounce {
-        0%,
-        60%,
-        100% {
+      .thinking span.thinking-dot:nth-child(2) { animation-delay: 0.18s; }
+      .thinking span.thinking-dot:nth-child(3) { animation-delay: 0.36s; }
+      @keyframes think-bounce {
+        0%, 60%, 100% {
           transform: translateY(0);
+          background: #52525b;
         }
         30% {
-          transform: translateY(-6px);
-          background: #2563eb;
+          transform: translateY(-7px);
+          background: #3b82f6;
         }
       }
-
-      #input-area {
-        width: 100%;
-        max-width: 760px;
-        padding: 16px;
-        display: flex;
-        gap: 10px;
-        border-top: 1px solid #2a2a2a;
-      }
-
-      #question {
-        flex: 1;
-        padding: 12px 16px;
-        background: #1a1a1a;
-        border: 1px solid #2a2a2a;
-        border-radius: 12px;
-        color: #e0e0e0;
-        font-size: 14px;
-        outline: none;
-        resize: none;
-        height: 48px;
-        line-height: 1.5;
-      }
-
-      #question:focus {
-        border-color: #2563eb;
-      }
-
-      #question::placeholder {
-        color: #555;
-      }
-
-      button {
-        padding: 12px 20px;
-        background: #2563eb;
-        color: white;
-        border: none;
-        border-radius: 12px;
-        font-size: 14px;
-        font-weight: 500;
-        cursor: pointer;
-        transition: background 0.2s;
-        white-space: nowrap;
-      }
-
-      button:hover {
-        background: #1d4ed8;
-      }
-      button:disabled {
-        background: #1e3a6e;
-        cursor: not-allowed;
-      }
-
-      .examples {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        padding: 0 16px 16px;
-        max-width: 760px;
-        width: 100%;
-      }
-
-      .example-chip {
-        padding: 6px 12px;
-        background: #1a1a1a;
-        border: 1px solid #2a2a2a;
-        border-radius: 20px;
+      .thinking-label {
+        margin-left: 10px;
         font-size: 12px;
-        color: #888;
-        cursor: pointer;
-        transition: all 0.2s;
+        color: #71717a;
+        font-family: "JetBrains Mono", monospace;
+        white-space: nowrap;
+        animation: think-pulse 1.6s ease-in-out infinite;
       }
-
-      .example-chip:hover {
-        border-color: #2563eb;
-        color: #e0e0e0;
+      @keyframes think-pulse {
+        0%, 100% { opacity: 0.5; }
+        50% { opacity: 1; }
       }
     </style>
   </head>
-  <body>
-    <header>
-      <h1>🤗 HF Docs Agent</h1>
-      <span>Powered by RAG · Transformers & PEFT docs</span>
+
+  <body
+    class="h-full flex flex-col font-sans overflow-hidden bg-[#0a0a0c] text-zinc-200 selection:bg-blue-500/20 selection:text-blue-300"
+  >
+    <!-- BEGIN: TopHeader -->
+    <header
+      class="h-14 border-b border-zinc-800/80 bg-zinc-950/90 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between z-20 shrink-0"
+    >
+      <!-- Left: Brand & Index Meta -->
+      <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2">
+          <span aria-label="Hugging Face Emoji" class="text-xl" role="img">🤗</span>
+          <span class="font-semibold text-sm tracking-tight text-zinc-100">HF Docs Agent</span>
+        </div>
+        <div class="h-4 w-[1px] bg-zinc-800 mx-1 hidden sm:block"></div>
+      </div>
+
+      <!-- Right: Quick Navigation & Actions -->
+      <div class="flex items-center gap-2">
+        <!-- Clear Chat Button -->
+        <button
+          id="clear-btn"
+          class="text-xs px-2.5 py-1 text-zinc-400 hover:text-zinc-200 border border-zinc-800 hover:border-zinc-700 rounded bg-zinc-900/50 transition-colors flex items-center gap-1.5"
+          title="Reset current session"
+          type="button"
+        >
+          <svg class="w-3.5 h-3.5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+            ></path>
+          </svg>
+          <span>Clear</span>
+        </button>
+      </div>
     </header>
+    <!-- END: TopHeader -->
 
-    <div id="chat-container"></div>
+    <!-- BEGIN: ChatStreamWorkspace -->
+    <main id="chat-container" class="flex-1 overflow-y-auto px-4 sm:px-6 py-8">
+      <div class="max-w-4xl mx-auto flex flex-col space-y-8" id="chat-inner">
+        <!-- Example prompts (hidden after first message) -->
+        <div class="flex flex-wrap items-center justify-center gap-2 pt-2" id="examples">
+          <span class="text-xs text-zinc-500 mr-1">Try:</span>
+          <button
+            class="px-3 py-1.5 text-xs font-mono bg-zinc-900/90 hover:bg-zinc-800 text-zinc-300 hover:text-zinc-100 border border-zinc-800 hover:border-zinc-700 rounded-full transition-colors example-chip"
+            type="button"
+          >
+            What does save_pretrained save to disk?
+          </button>
+          <button
+            class="px-3 py-1.5 text-xs font-mono bg-zinc-900/90 hover:bg-zinc-800 text-zinc-300 hover:text-zinc-100 border border-zinc-800 hover:border-zinc-700 rounded-full transition-colors example-chip"
+            type="button"
+          >
+            How do I apply LoRA with PEFT?
+          </button>
+          <button
+            class="px-3 py-1.5 text-xs font-mono bg-zinc-900/90 hover:bg-zinc-800 text-zinc-300 hover:text-zinc-100 border border-zinc-800 hover:border-zinc-700 rounded-full transition-colors example-chip"
+            type="button"
+          >
+            What is the difference between LoRA and QLoRA?
+          </button>
+          <button
+            class="px-3 py-1.5 text-xs font-mono bg-zinc-900/90 hover:bg-zinc-800 text-zinc-300 hover:text-zinc-100 border border-zinc-800 hover:border-zinc-700 rounded-full transition-colors example-chip"
+            type="button"
+          >
+            Show me how save_pretrained is implemented
+          </button>
+        </div>
+        <!-- Messages are appended here -->
+      </div>
+    </main>
+    <!-- END: ChatStreamWorkspace -->
 
-    <div class="examples" id="examples">
-      <div class="example-chip" onclick="useExample(this)">
-        What does save_pretrained save to disk?
+    <!-- BEGIN: BottomInputDock -->
+    <footer class="shrink-0 bg-zinc-950 border-t border-zinc-800/80 p-4 sm:pb-5">
+      <div class="max-w-4xl mx-auto space-y-2">
+        <!-- Floating Input Card -->
+        <div
+          class="relative bg-zinc-900 border border-zinc-700/80 rounded-xl focus-within:border-zinc-500 focus-within:ring-1 focus-within:ring-zinc-500 transition-all shadow-lg shadow-black/40"
+        >
+          <!-- Text Input Area -->
+          <div class="p-3 pb-1">
+            <textarea
+              id="question"
+              class="w-full resize-none bg-transparent border-0 p-0 text-sm text-zinc-100 placeholder-zinc-500 focus:ring-0 focus:outline-none"
+              placeholder="Ask anything about Hugging Face Transformers, Datasets, or PEFT..."
+              rows="2"
+            ></textarea>
+          </div>
+          <!-- Controls Toolbar Inside Input -->
+          <div class="px-3 py-2 flex items-center justify-between border-t border-zinc-800/70 bg-zinc-925 rounded-b-xl">
+            <!-- Left: hint -->
+            <div class="flex items-center gap-2">
+              <span class="hidden sm:inline text-[11px] font-mono text-zinc-400 select-none">Enter ↵ to send</span>
+            </div>
+            <!-- Right Submit Controls -->
+            <div class="flex items-center gap-2">
+              <button
+                id="send-btn"
+                class="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 disabled:bg-blue-900 disabled:cursor-not-allowed text-white text-xs font-medium rounded-lg transition-colors shadow-sm"
+                type="button"
+              >
+                <span>Ask</span>
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    d="M14 5l7 7m0 0l-7 7m7-7H3"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                  ></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+        <!-- Legal & System Verification Disclaimer -->
+        <div class="flex items-center justify-between text-[11px] text-zinc-400 px-1 font-mono">
+          <span>RAG index synced with Hugging Face docs. AI can make mistakes.</span>
+        </div>
       </div>
-      <div class="example-chip" onclick="useExample(this)">
-        How do I apply LoRA with PEFT?
-      </div>
-      <div class="example-chip" onclick="useExample(this)">
-        What is the difference between LoRA and QLoRA?
-      </div>
-      <div class="example-chip" onclick="useExample(this)">
-        Show me how save_pretrained is implemented
-      </div>
-    </div>
-
-    <div id="input-area">
-      <textarea
-        id="question"
-        placeholder="Ask anything about HF Transformers or PEFT..."
-      ></textarea>
-      <button id="send-btn" onclick="sendMessage()">Ask</button>
-    </div>
+    </footer>
+    <!-- END: BottomInputDock -->
 
     <script>
       const chat = document.getElementById("chat-container");
+      const chatInner = document.getElementById("chat-inner");
       const input = document.getElementById("question");
       const btn = document.getElementById("send-btn");
+      const examples = document.getElementById("examples");
 
+      // Enter to send
       input.addEventListener("keydown", (e) => {
         if (e.key === "Enter" && !e.shiftKey) {
           e.preventDefault();
@@ -387,11 +352,33 @@
         }
       });
 
-      function useExample(el) {
-        input.value = el.textContent;
+      // Example chips
+      document.querySelectorAll(".example-chip").forEach((chip) => {
+        chip.addEventListener("click", () => {
+          input.value = chip.textContent.trim();
+          input.focus();
+        });
+      });
+
+      // Clear chat
+      document.getElementById("clear-btn").addEventListener("click", () => {
+        // Remove all messages but keep date divider and examples
+        chatInner.querySelectorAll(".message-wrapper").forEach((el) => el.remove());
+        examples.style.display = "";
         input.focus();
+      });
+
+      // Scroll helper
+      function scrollToBottom() {
+        chat.scrollTop = chat.scrollHeight;
       }
 
+      // Current time string
+      function timeNow() {
+        return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      }
+
+      // Markdown rendering
       function renderMarkdown(text) {
         if (typeof marked !== "undefined" && marked.parse) {
           try {
@@ -405,26 +392,18 @@
           .replace(/&(?!amp;|lt;|gt;|quot;|#)/g, "&amp;")
           .replace(/<(?!\/?(br|strong|em|code)\b)[^>]*>/gi, "");
 
-        // Code blocks
-        html = html.replace(/```(\w+)?\n([\s\S]*?)```/g, function(_, lang, code) {
-          return `<pre><code class="language-${lang || 'text'}">${code.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</code></pre>`;
+        html = html.replace(/```(\w+)?\n([\s\S]*?)```/g, function (_, lang, code) {
+          return `<pre><code class="language-${lang || "text"}">${code.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</code></pre>`;
         });
-
-        // Inline code
         html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
-
-        // Bold
+        html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1<strong>".replace("strong>", "strong>"));
         html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
-
-        // Italic
         html = html.replace(/(^|[^\*])\*([^*]+)\*([^\*]|$)/g, "$1<em>$2</em>$3");
 
-        // Markdown tables
         const lines = html.split("\n");
         let inTable = false;
         let tableHtml = [];
         let newLines = [];
-
         for (let i = 0; i < lines.length; i++) {
           const line = lines[i].trim();
           if (line.startsWith("|") && line.endsWith("|")) {
@@ -432,12 +411,10 @@
               inTable = true;
               tableHtml = ["<table>"];
             }
-            if (line.includes("---")) {
-              continue;
-            }
-            const cells = line.slice(1, -1).split("|").map(c => c.trim());
+            if (line.includes("---")) continue;
+            const cells = line.slice(1, -1).split("|").map((c) => c.trim());
             const tag = tableHtml.length === 1 ? "th" : "td";
-            tableHtml.push("<tr>" + cells.map(c => `<${tag}>${c}</${tag}>`).join("") + "</tr>");
+            tableHtml.push("<tr>" + cells.map((c) => `<${tag}>${c}</${tag}>`).join("") + "</tr>");
           } else {
             if (inTable) {
               tableHtml.push("</table>");
@@ -452,91 +429,114 @@
           tableHtml.push("</table>");
           newLines.push(tableHtml.join(""));
         }
-
         html = newLines.join("\n");
 
-        // Bullet lists
-        html = html.replace(/(?:^|\n)(?:[-*]\s+.*(?:\n(?:\s{2,}|\t).*)*)+/g, function(match) {
-          const items = match.trim().split(/\n(?=[-*]\s+)/).map(item => {
-            return "<li>" + item.replace(/^[-*]\s+/, "").replace(/\n\s+/g, " ") + "</li>";
-          });
+        html = html.replace(/(?:^|\n)(?:[-*]\s+.*(?:\n(?:\s{2,}|\t).*)*)+/g, function (match) {
+          const items = match
+            .trim()
+            .split(/\n(?=[-*]\s+)/)
+            .map((item) => "<li>" + item.replace(/^[-*]\s+/, "").replace(/\n\s+/g, " ") + "</li>");
           return "<ul>" + items.join("") + "</ul>";
         });
-
-        // Numbered lists
-        html = html.replace(/(?:^|\n)(?:\d+\.\s+.*(?:\n(?:\s{2,}|\t).*)*)+/g, function(match) {
-          const items = match.trim().split(/\n(?=\d+\.\s+)/).map(item => {
-            return "<li>" + item.replace(/^\d+\.\s+/, "").replace(/\n\s+/g, " ") + "</li>";
-          });
+        html = html.replace(/(?:^|\n)(?:\d+\.\s+.*(?:\n(?:\s{2,}|\t).*)*)+/g, function (match) {
+          const items = match
+            .trim()
+            .split(/\n(?=\d+\.\s+)/)
+            .map((item) => "<li>" + item.replace(/^\d+\.\s+/, "").replace(/\n\s+/g, " ") + "</li>");
           return "<ol>" + items.join("") + "</ol>";
         });
 
-        // Headings
         html = html.replace(/^### (.*$)/gim, "<h3>$1</h3>");
         html = html.replace(/^## (.*$)/gim, "<h2>$1</h2>");
         html = html.replace(/^# (.*$)/gim, "<h1>$1</h1>");
 
-        // Paragraphs & line breaks
         const blocks = html.split(/\n\n+/);
-        html = blocks.map(b => {
-          b = b.trim();
-          if (!b) return "";
-          if (b.startsWith("<table") || b.startsWith("<ul") || b.startsWith("<ol") || b.startsWith("<pre") || b.startsWith("<h")) {
-            return b;
-          }
-          return "<p>" + b.replace(/\n/g, "<br>") + "</p>";
-        }).join("\n");
+        html = blocks
+          .map((b) => {
+            b = b.trim();
+            if (!b) return "";
+            if (
+              b.startsWith("<table") ||
+              b.startsWith("<ul") ||
+              b.startsWith("<ol") ||
+              b.startsWith("<pre") ||
+              b.startsWith("<h")
+            ) {
+              return b;
+            }
+            return "<p>" + b.replace(/\n/g, "<br>") + "</p>";
+          })
+          .join("\n");
 
         return html;
       }
 
-      function addMessage(text, role) {
+      // Add a user message
+      function addUserMessage(text) {
         const wrapper = document.createElement("div");
-        wrapper.className = `message ${role}`;
-        const label = document.createElement("div");
-        label.className = "label";
-        label.textContent = role === "user" ? "You" : "Agent";
-        const bubble = document.createElement("div");
-        bubble.className = "bubble";
-        if (role === "agent") {
-          bubble.innerHTML = renderMarkdown(text);
-        } else {
-          bubble.textContent = text;
-        }
-        wrapper.appendChild(label);
-        wrapper.appendChild(bubble);
-        chat.appendChild(wrapper);
-        chat.scrollTop = chat.scrollHeight;
+        wrapper.className = "message-wrapper flex flex-col items-end gap-1.5 group";
+        wrapper.innerHTML = `
+          <div class="flex items-center gap-2 mr-1">
+            <span class="text-xs text-zinc-500 font-mono">You</span>
+            <span class="text-[11px] text-zinc-600 font-mono">${timeNow()}</span>
+          </div>
+          <div class="max-w-xl sm:max-w-2xl bg-zinc-900 text-zinc-100 border border-zinc-700/70 px-4 py-3 rounded-2xl rounded-tr-sm shadow-sm">
+            <p class="text-[14px] leading-relaxed select-text whitespace-pre-wrap"></p>
+          </div>`;
+        wrapper.querySelector("p").textContent = text;
+        chatInner.appendChild(wrapper);
+        scrollToBottom();
         return wrapper;
       }
 
+      // Add an agent message
+      function addAgentMessage(text) {
+        const wrapper = document.createElement("div");
+        wrapper.className = "message-wrapper flex flex-col gap-2 items-start";
+        wrapper.innerHTML = `
+          <div class="flex items-center gap-2 ml-1">
+            <div class="w-5 h-5 rounded bg-zinc-800 border border-zinc-700 flex items-center justify-center text-xs">🤗</div>
+            <span class="text-xs font-semibold text-zinc-300">HF Docs Assistant</span>
+            <span class="text-[11px] text-zinc-400 font-mono">RAG</span>
+          </div>
+          <article class="w-full bg-zinc-900/60 border border-zinc-800 rounded-2xl p-5 sm:p-6 text-zinc-200 shadow-sm font-sans text-sm leading-relaxed">
+            <div class="md-body"></div>
+          </article>`;
+        wrapper.querySelector(".md-body").innerHTML = renderMarkdown(text);
+        chatInner.appendChild(wrapper);
+        scrollToBottom();
+        return wrapper;
+      }
+
+      // Thinking indicator shown while waiting for the model
       function addThinking() {
         const wrapper = document.createElement("div");
-        wrapper.className = "message agent";
-        const label = document.createElement("div");
-        label.className = "label";
-        label.textContent = "Agent";
-        const dots = document.createElement("div");
-        dots.className = "thinking";
-        dots.innerHTML = "<span></span><span></span><span></span>";
-        wrapper.appendChild(label);
-        wrapper.appendChild(dots);
-        chat.appendChild(wrapper);
-        chat.scrollTop = chat.scrollHeight;
+        wrapper.className = "message-wrapper flex flex-col gap-2 items-start";
+        wrapper.innerHTML = `
+          <div class="flex items-center gap-2 ml-1">
+            <div class="w-5 h-5 rounded bg-zinc-800 border border-zinc-700 flex items-center justify-center text-xs">🤗</div>
+            <span class="text-xs font-semibold text-zinc-300">HF Docs Assistant</span>
+            <span class="text-[11px] text-zinc-400 font-mono">thinking…</span>
+          </div>
+          <div class="thinking">
+            <span class="thinking-dot"></span><span class="thinking-dot"></span><span class="thinking-dot"></span>
+            <span class="thinking-label">retrieving docs &amp; reasoning</span>
+          </div>`;
+        chatInner.appendChild(wrapper);
+        scrollToBottom();
         return wrapper;
       }
 
+      // Send message
       async function sendMessage() {
         const question = input.value.trim();
         if (!question) return;
 
-        // Hide examples after first message
-        document.getElementById("examples").style.display = "none";
-
+        examples.style.display = "none";
         input.value = "";
         btn.disabled = true;
 
-        addMessage(question, "user");
+        addUserMessage(question);
         const thinking = addThinking();
 
         try {
@@ -545,18 +545,19 @@
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ question }),
           });
-
           const data = await res.json();
           thinking.remove();
-          addMessage(data.answer || "No answer returned.", "agent");
+          addAgentMessage(data.answer || "No answer returned.");
         } catch (err) {
           thinking.remove();
-          addMessage("Something went wrong. Please try again.", "agent");
+          addAgentMessage("Something went wrong. Please try again.");
         }
 
         btn.disabled = false;
         input.focus();
       }
+
+      btn.addEventListener("click", sendMessage);
     </script>
   </body>
 </html>

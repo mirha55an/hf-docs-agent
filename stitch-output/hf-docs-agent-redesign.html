@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+
+<html class="h-full bg-zinc-950 text-zinc-100 antialiased" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>HF Docs Agent — RAG Developer Assistant</title>
+<!-- Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+            mono: ['JetBrains Mono', 'Menlo', 'Monaco', 'Courier New', 'monospace'],
+          },
+          colors: {
+            zinc: {
+              850: '#1e1e23',
+              925: '#121215',
+              950: '#0c0d0e',
+            }
+          }
+        }
+      }
+    }
+  </script>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<style data-purpose="custom-scrollbars">
+    /* Subtle custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #27272a;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #3f3f46;
+    }
+  </style>
+</head>
+<body class="h-full flex flex-col font-sans overflow-hidden bg-[#0a0a0c] text-zinc-200 selection:bg-blue-500/20 selection:text-blue-300">
+<!-- BEGIN: TopHeader -->
+<header class="h-14 border-b border-zinc-800/80 bg-zinc-950/90 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between z-20 shrink-0">
+<!-- Left: Brand & Index Meta -->
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-2">
+<span aria-label="Hugging Face Emoji" class="text-xl" role="img">🤗</span>
+<span class="font-semibold text-sm tracking-tight text-zinc-100">HF Docs Agent</span>
+</div>
+<div class="h-4 w-[1px] bg-zinc-800 mx-1 hidden sm:block"></div>
+<!-- Scope Version Tag -->
+<div class="hidden md:flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium bg-zinc-900 border border-zinc-800 text-zinc-400">
+<span>Transformers &amp; PEFT</span>
+<span class="text-zinc-600 font-mono text-[11px]">v4.36</span>
+</div>
+<!-- Active Vector Index Status -->
+<div class="hidden lg:flex items-center gap-2 px-2.5 py-0.5 rounded-full text-xs font-mono bg-emerald-950/40 border border-emerald-800/50 text-emerald-400">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+</span>
+<span>Vector Index Active • 14,280 chunks</span>
+</div>
+</div>
+<!-- Right: Quick Navigation & Actions -->
+<div class="flex items-center gap-2">
+<!-- Hugging Face Space Badge -->
+<a class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono text-zinc-400 hover:text-zinc-200 rounded border border-zinc-800 hover:border-zinc-700 bg-zinc-900/60 transition-colors" href="#">
+<svg class="w-3.5 h-3.5 text-yellow-500/90" fill="currentColor" viewbox="0 0 24 24">
+<path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.784 1.399 8.169-7.333-3.856-7.333 3.856 1.399-8.169-5.934-5.784 8.2-1.192zm0 5.702l-2.232 4.523-4.991.726 3.612 3.521-.852 4.973 4.463-2.347 4.463 2.347-.852-4.973 3.612-3.521-4.991-.726z"></path>
+</svg>
+<span>Spaces v2</span>
+</a>
+<!-- Quick Link to Docs -->
+<a class="text-xs px-2.5 py-1 text-zinc-400 hover:text-zinc-100 transition-colors flex items-center gap-1" href="https://huggingface.co/docs" rel="noreferrer" target="_blank">
+<span>Docs Reference</span>
+<svg class="w-3 h-3 text-zinc-500" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</a>
+<!-- Clear Chat Button -->
+<button class="text-xs px-2.5 py-1 text-zinc-400 hover:text-zinc-200 border border-zinc-800 hover:border-zinc-700 rounded bg-zinc-900/50 transition-colors flex items-center gap-1.5" title="Reset current session" type="button">
+<svg class="w-3.5 h-3.5 text-zinc-500" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+<span>Clear</span>
+</button>
+<!-- Settings Icon Button -->
+<button aria-label="Agent RAG Settings" class="p-1.5 text-zinc-400 hover:text-zinc-200 rounded border border-zinc-800 hover:border-zinc-700 bg-zinc-900/50 transition-colors" type="button">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path>
+<path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path>
+</svg>
+</button>
+</div>
+</header>
+<!-- END: TopHeader -->
+<!-- BEGIN: ChatStreamWorkspace -->
+<main class="flex-1 overflow-y-auto px-4 sm:px-6 py-8" data-purpose="chat-scroll-container">
+<div class="max-w-4xl mx-auto flex flex-col space-y-8">
+<!-- Conversation Date / Anchor Divider -->
+<div class="flex items-center justify-center">
+<span class="text-[11px] font-mono tracking-wider uppercase text-zinc-400 bg-zinc-900/70 border border-zinc-800/80 px-3 py-1 rounded-full">
+          Today • Transformers Docs Session
+        </span>
+</div>
+<!-- BEGIN: UserMessageBlock -->
+<div class="flex flex-col items-end gap-1.5 group">
+<div class="flex items-center gap-2 mr-1">
+<span class="text-xs text-zinc-500 font-mono">You</span>
+<span class="text-[11px] text-zinc-600 font-mono">14:32</span>
+</div>
+<!-- User Query Bubble -->
+<div class="max-w-xl sm:max-w-2xl bg-zinc-900 text-zinc-100 border border-zinc-700/70 px-4 py-3 rounded-2xl rounded-tr-sm shadow-sm">
+<p class="text-[14px] leading-relaxed select-text">What does <code class="font-mono text-xs bg-zinc-800 px-1.5 py-0.5 rounded text-blue-300 font-medium">save_pretrained</code> save to disk?</p>
+</div>
+</div>
+<!-- END: UserMessageBlock -->
+<!-- BEGIN: AgentResponseBlock -->
+<div class="flex flex-col gap-2 items-start" data-purpose="agent-message">
+<!-- Agent Identity & Latency Header -->
+<div class="flex items-center gap-2 ml-1">
+<div class="w-5 h-5 rounded bg-zinc-800 border border-zinc-700 flex items-center justify-center text-xs">
+            🤗
+          </div>
+<span class="text-xs font-semibold text-zinc-300">HF Docs Assistant</span>
+<span class="text-[11px] text-zinc-400 font-mono">RAG v4.36 • 420ms</span>
+<span class="inline-flex items-center text-[10px] font-mono text-emerald-400/90 bg-emerald-950/40 border border-emerald-800/50 px-1.5 py-0.2 rounded">cosine 0.94</span>
+</div>
+<!-- Assistant Message Body Card -->
+<article class="w-full bg-zinc-900/60 border border-zinc-800 rounded-2xl p-5 sm:p-6 text-zinc-200 shadow-sm space-y-4 font-sans text-sm leading-relaxed">
+<!-- Direct Key Takeaway -->
+<p class="text-[14.5px] font-medium text-zinc-100 leading-snug border-l-2 border-blue-500 pl-3 py-0.5">
+<code class="font-mono text-[13px] bg-zinc-800 px-1.5 py-0.5 rounded text-blue-300">save_pretrained()</code> writes all necessary configuration and weight artifacts to reload the exact state of an instance using its matching <code class="font-mono text-[13px] bg-zinc-800 px-1.5 py-0.5 rounded text-blue-300">from_pretrained()</code> method.
+          </p>
+<p class="text-zinc-300 text-sm">The exact artifacts written depend on the class component being serialized:</p>
+<!-- Component Breakdown List -->
+<div class="space-y-3 pt-1">
+<!-- Item 1: Model -->
+<div class="rounded-lg bg-zinc-950/50 border border-zinc-800/70 p-3.5 space-y-1.5">
+<div class="flex items-center justify-between">
+<span class="font-mono font-medium text-xs text-zinc-200 flex items-center gap-1.5">
+<svg class="w-3.5 h-3.5 text-zinc-400" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+                  PreTrainedModel (e.g., BertModel, GPT2LMHeadModel)
+                </span>
+<span class="text-[11px] font-mono text-zinc-400">weights &amp; architecture</span>
+</div>
+<ul class="text-xs text-zinc-400 space-y-1 list-disc list-inside">
+<li><code class="font-mono text-zinc-300 bg-zinc-900 px-1 py-0.5 rounded">model.safetensors</code> (default safe serialized weights) or <code class="font-mono text-zinc-300 bg-zinc-900 px-1 py-0.5 rounded">pytorch_model.bin</code>.</li>
+<li><code class="font-mono text-zinc-300 bg-zinc-900 px-1 py-0.5 rounded">config.json</code> — Model architecture metadata, hyperparameters, and tensor layer shapes.</li>
+<li><code class="font-mono text-zinc-300 bg-zinc-900 px-1 py-0.5 rounded">generation_config.json</code> — Optional inference sampling parameters (top_p, beam size, etc.).</li>
+</ul>
+</div>
+<!-- Item 2: Tokenizer -->
+<div class="rounded-lg bg-zinc-950/50 border border-zinc-800/70 p-3.5 space-y-1.5">
+<div class="flex items-center justify-between">
+<span class="font-mono font-medium text-xs text-zinc-200 flex items-center gap-1.5">
+<svg class="w-3.5 h-3.5 text-zinc-400" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+                  PreTrainedTokenizer / PreTrainedTokenizerFast
+                </span>
+<span class="text-[11px] font-mono text-zinc-400">vocab &amp; tokens</span>
+</div>
+<ul class="text-xs text-zinc-400 space-y-1 list-disc list-inside">
+<li><code class="font-mono text-zinc-300 bg-zinc-900 px-1 py-0.5 rounded">tokenizer.json</code> — Full serialized Rust fast-tokenizer pipeline.</li>
+<li><code class="font-mono text-zinc-300 bg-zinc-900 px-1 py-0.5 rounded">vocab.txt</code> or <code class="font-mono text-zinc-300 bg-zinc-900 px-1 py-0.5 rounded">vocab.json</code> / <code class="font-mono text-zinc-300 bg-zinc-900 px-1 py-0.5 rounded">merges.txt</code> — Vocabulary tables.</li>
+<li><code class="font-mono text-zinc-300 bg-zinc-900 px-1 py-0.5 rounded">tokenizer_config.json</code> and <code class="font-mono text-zinc-300 bg-zinc-900 px-1 py-0.5 rounded">special_tokens_map.json</code> — Tokenizer rules and flags.</li>
+</ul>
+</div>
+<!-- Item 3: PEFT Adapters -->
+<div class="rounded-lg bg-zinc-950/50 border border-zinc-800/70 p-3.5 space-y-1.5">
+<div class="flex items-center justify-between">
+<span class="font-mono font-medium text-xs text-zinc-200 flex items-center gap-1.5">
+<svg class="w-3.5 h-3.5 text-zinc-400" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+                  PEFT LoRA Adapters (PeftModel)
+                </span>
+<span class="text-[11px] font-mono text-zinc-400">delta matrices</span>
+</div>
+<ul class="text-xs text-zinc-400 space-y-1 list-disc list-inside">
+<li><code class="font-mono text-zinc-300 bg-zinc-900 px-1 py-0.5 rounded">adapter_model.safetensors</code> — Low-rank weights (only trainable weights, not the base model).</li>
+<li><code class="font-mono text-zinc-300 bg-zinc-900 px-1 py-0.5 rounded">adapter_config.json</code> — Hyperparameters (r, lora_alpha, target_modules).</li>
+</ul>
+</div>
+</div>
+<!-- Code Snippet Display -->
+<div class="rounded-lg border border-zinc-800 bg-[#090a0c] overflow-hidden" data-purpose="code-sample-block">
+<!-- Snippet Titlebar -->
+<div class="flex items-center justify-between px-3.5 py-2 border-b border-zinc-800/80 bg-zinc-900/40 text-xs text-zinc-400 font-mono">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-zinc-600"></span>
+<span>save_and_reload.py</span>
+</div>
+<button class="flex items-center gap-1 text-zinc-400 hover:text-zinc-200 transition-colors text-[11px] px-2 py-0.5 rounded border border-zinc-800 hover:border-zinc-700 bg-zinc-900" type="button">
+<svg class="w-3 h-3" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+<span>Copy code</span>
+</button>
+</div>
+<!-- Code Content with Line Numbers -->
+<div class="p-4 font-mono text-[12.5px] leading-6 overflow-x-auto text-zinc-300">
+<table class="w-full border-collapse">
+<tbody>
+<tr>
+<td class="select-none text-right pr-4 text-zinc-700 w-8">1</td>
+<td><span class="text-purple-400">from</span> transformers <span class="text-purple-400">import</span> AutoModelForCausalLM, AutoTokenizer</td>
+</tr>
+<tr>
+<td class="select-none text-right pr-4 text-zinc-700 w-8">2</td>
+<td></td>
+</tr>
+<tr>
+<td class="select-none text-right pr-4 text-zinc-700 w-8">3</td>
+<td><span class="text-zinc-500"># 1. Save weights, config, and vocabulary</span></td>
+</tr>
+<tr>
+<td class="select-none text-right pr-4 text-zinc-700 w-8">4</td>
+<td>save_dir = <span class="text-emerald-300">"./my_finetuned_checkpoint"</span></td>
+</tr>
+<tr>
+<td class="select-none text-right pr-4 text-zinc-700 w-8">5</td>
+<td>model.save_pretrained(save_dir, safe_serialization=<span class="text-amber-400">True</span>)</td>
+</tr>
+<tr>
+<td class="select-none text-right pr-4 text-zinc-700 w-8">6</td>
+<td>tokenizer.save_pretrained(save_dir)</td>
+</tr>
+<tr>
+<td class="select-none text-right pr-4 text-zinc-700 w-8">7</td>
+<td></td>
+</tr>
+<tr>
+<td class="select-none text-right pr-4 text-zinc-700 w-8">8</td>
+<td><span class="text-zinc-500"># 2. Reload cleanly from disk</span></td>
+</tr>
+<tr>
+<td class="select-none text-right pr-4 text-zinc-700 w-8">9</td>
+<td>reloaded_model = AutoModelForCausalLM.from_pretrained(save_dir)</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Retrieved Context & Citations Accordion -->
+<details class="group rounded-lg border border-zinc-800 bg-zinc-950/40 p-3 text-xs" data-purpose="rag-citations">
+<summary class="flex items-center justify-between cursor-pointer list-none font-medium text-zinc-400 hover:text-zinc-200 select-none">
+<span class="flex items-center gap-2">
+<svg class="w-3.5 h-3.5 text-blue-400 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+<span>Retrieved Context &amp; Citations (3 document chunks)</span>
+</span>
+<span class="font-mono text-[11px] text-zinc-400">embedding: bge-large-en-v1.5</span>
+</summary>
+<!-- Expanded citation list -->
+<div class="mt-3 pt-3 border-t border-zinc-800/80 space-y-2.5">
+<!-- Chunk 1 -->
+<div class="p-2.5 rounded bg-zinc-900/50 border border-zinc-800 flex items-start justify-between gap-3">
+<div class="space-y-1">
+<div class="flex items-center gap-2">
+<span class="font-mono text-zinc-200 text-[11px]">transformers/main_classes/model.html#PreTrainedModel.save_pretrained</span>
+</div>
+<p class="text-zinc-400 text-[11px] leading-relaxed line-clamp-2">
+                    "save_pretrained writes model weights (model.safetensors or pytorch_model.bin) and the configuration file (config.json) to an output directory."
+                  </p>
+</div>
+<span class="shrink-0 text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-950/40 text-blue-400 border border-blue-800/40">score 0.94</span>
+</div>
+<!-- Chunk 2 -->
+<div class="p-2.5 rounded bg-zinc-900/50 border border-zinc-800 flex items-start justify-between gap-3">
+<div class="space-y-1">
+<div class="flex items-center gap-2">
+<span class="font-mono text-zinc-200 text-[11px]">transformers/main_classes/tokenizer.html#PreTrainedTokenizerBase.save_pretrained</span>
+</div>
+<p class="text-zinc-400 text-[11px] leading-relaxed line-clamp-2">
+                    "Saves the tokenizer vocabulary files and configuration files (tokenizer_config.json, special_tokens_map.json) to a specified folder."
+                  </p>
+</div>
+<span class="shrink-0 text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-950/40 text-blue-400 border border-blue-800/40">score 0.91</span>
+</div>
+<!-- Chunk 3 -->
+<div class="p-2.5 rounded bg-zinc-900/50 border border-zinc-800 flex items-start justify-between gap-3">
+<div class="space-y-1">
+<div class="flex items-center gap-2">
+<span class="font-mono text-zinc-200 text-[11px]">peft/quicktour.html#saving-peft-models</span>
+</div>
+<p class="text-zinc-400 text-[11px] leading-relaxed line-clamp-2">
+                    "PEFT models only save the trained adapter weights (adapter_model.safetensors) and adapter_config.json rather than entire foundation weights."
+                  </p>
+</div>
+<span class="shrink-0 text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-950/40 text-blue-400 border border-blue-800/40">score 0.88</span>
+</div>
+</div>
+</details>
+<!-- Interactive Action Toolbar -->
+<div class="flex items-center justify-between pt-2 border-t border-zinc-800/60 text-xs text-zinc-400">
+<div class="flex items-center gap-2">
+<button class="p-1.5 hover:text-zinc-200 hover:bg-zinc-800/60 rounded transition-colors" title="Copy markdown response" type="button">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+<div class="h-3 w-[1px] bg-zinc-800"></div>
+<button class="p-1.5 hover:text-zinc-200 hover:bg-zinc-800/60 rounded transition-colors" title="Accurate response" type="button">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+<button class="p-1.5 hover:text-zinc-200 hover:bg-zinc-800/60 rounded transition-colors" title="Inaccurate or outdated response" type="button">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.765.94m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+<div class="h-3 w-[1px] bg-zinc-800"></div>
+<button class="p-1.5 hover:text-zinc-200 hover:bg-zinc-800/60 rounded transition-colors" title="Regenerate answer" type="button">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+</div>
+<button class="text-[11px] font-mono text-zinc-400 hover:text-zinc-300 transition-colors" type="button">
+              Raw RAG JSON ↗
+            </button>
+</div>
+</article>
+<!-- Suggested Follow-Up Prompt Chips -->
+<div class="flex flex-wrap items-center gap-2 pt-1 pl-1" data-purpose="follow-up-suggestions">
+<span class="text-xs text-zinc-400 mr-1">Suggested:</span>
+<button class="px-3 py-1 text-xs font-mono bg-zinc-900/90 hover:bg-zinc-800 text-zinc-300 hover:text-zinc-100 border border-zinc-800 hover:border-zinc-700 rounded-full transition-colors" type="button">
+            How to load with from_pretrained?
+          </button>
+<button class="px-3 py-1 text-xs font-mono bg-zinc-900/90 hover:bg-zinc-800 text-zinc-300 hover:text-zinc-100 border border-zinc-800 hover:border-zinc-700 rounded-full transition-colors" type="button">
+            Save in safetensors format only
+          </button>
+<button class="px-3 py-1 text-xs font-mono bg-zinc-900/90 hover:bg-zinc-800 text-zinc-300 hover:text-zinc-100 border border-zinc-800 hover:border-zinc-700 rounded-full transition-colors" type="button">
+            Exclude optimizer states
+          </button>
+</div>
+</div>
+<!-- END: AgentResponseBlock -->
+</div>
+</main>
+<!-- END: ChatStreamWorkspace -->
+<!-- BEGIN: BottomInputDock -->
+<footer class="shrink-0 bg-zinc-950 border-t border-zinc-800/80 p-4 sm:pb-5">
+<div class="max-w-4xl mx-auto space-y-2">
+<!-- Floating Input Card -->
+<div class="relative bg-zinc-900 border border-zinc-700/80 rounded-xl focus-within:border-zinc-500 focus-within:ring-1 focus-within:ring-zinc-500 transition-all shadow-lg shadow-black/40">
+<!-- Text Input Area -->
+<div class="p-3 pb-1">
+<textarea class="w-full resize-none bg-transparent border-0 p-0 text-sm text-zinc-100 placeholder-zinc-500 focus:ring-0 focus:outline-none" placeholder="Ask anything about Hugging Face Transformers, Datasets, or PEFT..." rows="2"></textarea>
+</div>
+<!-- Controls Toolbar Inside Input -->
+<div class="px-3 py-2 flex items-center justify-between border-t border-zinc-800/70 bg-zinc-925 rounded-b-xl">
+<!-- Left Configuration Tags -->
+<div class="flex items-center gap-2">
+<!-- Scope Pill -->
+<button class="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-mono text-zinc-300 hover:text-zinc-100 bg-zinc-850 hover:bg-zinc-800 border border-zinc-750 rounded transition-colors" type="button">
+<span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+<span>All HF Docs</span>
+<svg class="w-3 h-3 text-zinc-500" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+<!-- Search Depth Indicator -->
+<span class="hidden sm:inline-flex items-center gap-1 text-[11px] font-mono text-zinc-400 px-2 py-1 bg-zinc-850/60 rounded border border-zinc-800">
+<span>k=4 chunks</span>
+</span>
+</div>
+<!-- Right Submit Controls -->
+<div class="flex items-center gap-2">
+<span class="hidden sm:inline text-[11px] font-mono text-zinc-400 select-none">
+              Enter ↵ to send
+            </span>
+<button class="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors shadow-sm" type="button">
+<span>Ask</span>
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M14 5l7 7m0 0l-7 7m7-7H3" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+</div>
+</div>
+</div>
+<!-- Legal & System Verification Disclaimer -->
+<div class="flex items-center justify-between text-[11px] text-zinc-400 px-1 font-mono">
+<span>RAG index synced with Hugging Face docs. AI can make mistakes.</span>
+<span class="hidden sm:inline text-zinc-400">HF Embeddings API • text-embeddings-inference</span>
+</div>
+</div>
+</footer>
+<!-- END: BottomInputDock -->
+</body></html>
